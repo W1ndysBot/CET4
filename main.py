@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import requests
 
 # 添加项目根目录到sys.path
 sys.path.append(
@@ -61,6 +62,14 @@ async def toggle_function_status(websocket, group_id, message_id, authorized):
         )
 
 
+# 获取CET4单词
+def get_cet4_word():
+    url = "http://47.120.68.44:999/cihui"
+    response = requests.get(url)
+    # 去掉空行
+    return response.text.replace("\n", "")
+
+
 # 群消息处理函数
 async def handle_CET4_group_message(websocket, msg):
     # 确保数据目录存在
@@ -74,11 +83,18 @@ async def handle_CET4_group_message(websocket, msg):
         authorized = user_id in owner_id
 
         # 是否是开启命令
-        if raw_message.startswith("ex"):
+        if raw_message == "cet4":
             await toggle_function_status(websocket, group_id, message_id, authorized)
+            return
+
+        # 检查是否开启
+        if not load_function_status(group_id):
+            return
         else:
-            # 其他处理函数
-            pass
+            if raw_message == "四级单词":
+                message = f"[CQ:reply,id={message_id}]" + get_cet4_word()
+                await send_group_msg(websocket, group_id, message)
+
     except Exception as e:
         logging.error(f"处理CET4群消息失败: {e}")
         await send_group_msg(
